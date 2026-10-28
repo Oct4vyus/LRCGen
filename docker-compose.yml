@@ -1,0 +1,36 @@
+version: '3.8'
+
+services:
+  lrcgen:
+    container_name: lrcgen-whisper
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: lrcgen:latest
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - PUID=1000
+      - PGID=100
+      - TZ=America/Argentina/Buenos_Aires
+      - WHISPER_MODEL=medium
+      - DEFAULT_LANGUAGE=es
+      - UVR_ENABLED=true
+    volumes:
+      # Montaje de las bibliotecas de música compartidas
+      - /srv/dev-disk-by-uuid-fb0ea90e-82a1-456a-81d5-ac9da77d8ced/Sistema/jellyfin/musica:/music/jellyfin:rw
+      - /srv/dev-disk-by-uuid-5b30d7cf-cf69-412c-af7b-dcd238d72878/Pub-Local:/music/Pub-Local:rw
+      # Montaje de la carpeta de reportes de auditoría JSON/HTML
+      - /srv/dev-disk-by-uuid-5b30d7cf-cf69-412c-af7b-dcd238d72878/reportes:/reports:rw
+      # Caché persistente de modelos para evitar re-descargar Whisper 'medium' (~1.5 GB) y UVR5 en cada reinicio
+      - /srv/dev-disk-by-uuid-5b30d7cf-cf69-412c-af7b-dcd238d72878/models/whisper:/root/.cache/whisper
+      - /srv/dev-disk-by-uuid-5b30d7cf-cf69-412c-af7b-dcd238d72878/uvr5:/root/.cache/audio-separator
+      # Almacenamiento temporal de uploads procesados por el backend
+      - /srv/dev-disk-by-uuid-5b30d7cf-cf69-412c-af7b-dcd238d72878/uploads:/app/uploads
+    command: python -m uvicorn app:app --host 0.0.0.0 --port 8000
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/ || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3

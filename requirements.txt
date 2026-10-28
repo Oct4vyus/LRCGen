@@ -1,11 +1,16 @@
-fastapi>=0.104.0
-uvicorn[standard]>=0.24.0
-python-multipart>=0.0.6
-openai-whisper>=20231117
-audio-separator[cpu]>=0.24.0
-pyphen>=0.14.0
-langdetect>=1.0.9
-httpx>=0.25.0
-mutagen>=1.47.0
-numpy>=1.24.0
+# Dependencias para LRCGen (Servidor Backend FastAPI y Motor de Transcripción)
+fastapi
+uvicorn[standard]
+python-multipart
+openai-whisper
+requests
+pydantic
 
+# Aislamiento vocal opcional (UVR5)
+audio-separator[cpu]
+
+# PyTorch (se recomienda instalar en la capa del Dockerfile con el índice CPU)
+torch
+torchvision
+torchaudio
+pyphen

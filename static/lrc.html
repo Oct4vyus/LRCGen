@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LRC Generator — Whisper</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/style.css">
+  <link rel="stylesheet" href="/static/lrc.css">
+</head>
+<body class="lrc-page">
+<div id="wsHidden" aria-hidden="true"></div>
+<div class="app lrc-app">
+  <header class="header lrc-header">
+    <div class="brand">
+      <svg class="brand-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M9 18V5l12-2v13"/>
+        <circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>
+      </svg>
+      <span class="brand-name">LRC Generator</span>
+    </div>
+    <div class="header-right">
+      <div class="ctrl-group">
+        <label class="ctrl-label" for="modelSelect">Whisper</label>
+        <select id="modelSelect" class="select">
+          <option value="tiny">Tiny — rápido</option>
+          <option value="base" selected>Base — recomendado</option>
+          <option value="small">Small</option>
+          <option value="medium">Medium — más preciso y lento</option>
+          <option value="large">Large — requiere más recursos</option>
+        </select>
+      </div>
+      <div class="ctrl-group">
+        <label class="ctrl-label" for="langSelect">Idioma</label>
+        <select id="langSelect" class="select">
+          <option value="">Automático</option>
+          <option value="es" selected>Español</option>
+          <option value="en">Inglés</option>
+          <option value="de">Alemán</option>
+          <option value="fr">Francés</option>
+          <option value="it">Italiano</option>
+          <option value="pt">Portugués</option>
+          <option value="ja">Japonés</option>
+          <option value="ko">Coreano</option>
+          <option value="zh">Chino</option>
+          <option value="ar">Árabe</option>
+          <option value="ru">Ruso</option>
+          <option value="tr">Turco</option>
+        </select>
+      </div>
+      <a class="btn btn-secondary btn-sm" href="/" title="Volver al estudio TTML">Estudio TTML</a>
+    </div>
+  </header>
+
+  <main class="lrc-main">
+    <section id="uploadSection" class="lrc-upload-section">
+      <div class="lrc-page-title">
+        <h1>Generar letra sincronizada (.lrc)</h1>
+        <p>Sube una canción para transcribirla con Whisper o pega/importa la letra para sincronizarla con el audio.</p>
+      </div>
+
+      <div id="dropZone" class="drop-zone">
+        <div class="drop-glow"></div>
+        <svg class="drop-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M9 18V5l12-2v13"/>
+          <circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>
+        </svg>
+        <p class="drop-title">Suelta aquí el archivo de audio</p>
+        <p class="drop-sub">MP3 · FLAC · WAV · M4A · OGG · OPUS</p>
+        <button class="btn btn-secondary" id="browseBtn" type="button">Elegir audio</button>
+        <input type="file" id="fileInput" accept=".mp3,.flac,.wav,.m4a,.ogg,.opus,.aac" hidden>
+      </div>
+
+      <div id="fileInfo" class="file-info hidden">
+        <span class="lrc-file-icon" aria-hidden="true">♫</span>
+        <span id="fileNameDisplay"></span>
+        <button class="btn btn-ghost btn-xs" id="changeFileBtn" type="button">Cambiar audio</button>
+      </div>
+
+      <div class="card mt-4" id="uvrCard">
+        <div class="uvr-card-inner">
+          <div class="uvr-left">
+            <label class="toggle-switch" id="uvrToggleLabel">
+              <input type="checkbox" id="uvrToggle">
+              <span class="toggle-track"><span class="toggle-thumb"></span></span>
+            </label>
+            <div class="uvr-text">
+              <span class="uvr-title">Aislar voz <span class="badge badge-uvr">UVR5</span></span>
+              <span class="uvr-sub">Opcional: separa la voz antes de transcribirla; necesita audio-separator instalado.</span>
+            </div>
+          </div>
+          <div class="uvr-right" id="uvrModelWrap">
+            <label class="label" for="uvrModelSelect">Modelo de aislamiento</label>
+            <select id="uvrModelSelect" class="select">
+              <option value="UVR-MDX-NET-Inst_HQ_3">MDX-Net HQ3 — recomendado</option>
+              <option value="UVR-MDX-NET-Voc_FT">MDX-Net Voc_FT</option>
+              <option value="UVR_MDXNET_KARA_2">MDX-Net KARA 2</option>
+              <option value="htdemucs_ft">Demucs — mejor calidad, más lento</option>
+            </select>
+            <span class="uvr-model-hint" id="uvrInstallHint" style="display:none">Para aislar voces instala <code>audio-separator[cpu]</code>. La transcripción normal no lo requiere.</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="card mt-4">
+        <div class="card-header">
+          <span class="card-title">Letra de referencia</span>
+          <label class="btn btn-ghost btn-sm lrc-import-label">
+            Importar .lrc o .txt
+            <input type="file" id="lrcImportInput" accept=".lrc,.txt" hidden>
+          </label>
+        </div>
+        <p class="lrc-card-help">Déjalo vacío para que Whisper intente reconocer la letra desde el audio. Si pegas o importas texto, Whisper intentará alinearlo; una letra de referencia suele mejorar la transcripción.</p>
+        <textarea id="lyricsInput" class="textarea" rows="7" placeholder="Pega la letra, una línea por renglón. También puedes dejarlo vacío para transcribir desde el audio."></textarea>
+      </div>
+
+      <div class="card mt-4" id="tapVocalsLyricsCard" style="display:none">
+        <div class="uvr-card-inner">
+          <div class="uvr-left">
+            <label class="toggle-switch" id="tapVocalsToggleLabel">
+              <input type="checkbox" id="tapVocalsAutoToggle">
+              <span class="toggle-track"><span class="toggle-thumb"></span></span>
+            </label>
+            <div class="uvr-text">
+              <span class="uvr-title">Aislar voz para Tap Sync <span class="badge badge-uvr">UVR5</span></span>
+              <span class="uvr-sub">Prepara una vista previa vocal para facilitar la sincronización manual.</span>
+            </div>
+          </div>
+          <div class="uvr-right" id="tapVocalsModelWrap">
+            <label class="label" for="tapVocalsModelSelect">Modelo</label>
+            <select id="tapVocalsModelSelect" class="select">
+              <option value="UVR-MDX-NET-Inst_HQ_3">MDX-Net HQ3 — recomendado</option>
+              <option value="UVR-MDX-NET-Voc_FT">MDX-Net Voc_FT</option>
+              <option value="UVR_MDXNET_KARA_2">MDX-Net KARA 2</option>
+              <option value="htdemucs_ft">Demucs — más lento</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="action-row">
+        <button id="tapSyncBtn" class="btn btn-secondary btn-lg" disabled type="button">Tap Sync manual</button>
+        <button id="transcribeBtn" class="btn btn-primary btn-lg" disabled type="button">Transcribir con Whisper</button>
+      </div>
+      <p class="lrc-note">La transcripción automática puede equivocarse, especialmente con música. Revisa y corrige el resultado antes de descargar el LRC.</p>
+    </section>
+
+    <section id="progressSection" class="hidden">
+      <div class="progress-card">
+        <div class="spinner-ring"></div>
+        <p id="progressLabel" class="progress-label">Iniciando…</p>
+        <div class="progress-track"><div class="progress-bar" id="progressBar"></div></div>
+        <div class="progress-steps" id="progressSteps" style="display:none">
+          <div class="progress-step" id="stepSeparate"><span class="progress-step-dot"></span> Aislamiento vocal</div>
+          <span class="progress-step-sep">›</span>
+          <div class="progress-step" id="stepWhisper"><span class="progress-step-dot"></span> Whisper</div>
+        </div>
+        <button id="cancelBtn" class="btn btn-ghost btn-sm" type="button">Cancelar</button>
+      </div>
+    </section>
+
+    <section id="editorSection" class="hidden">
+      <div class="tl-panel lrc-timeline-panel">
+        <div class="tl-controls-bar">
+          <div class="transport">
+            <button id="seekBackBtn" class="btn btn-icon" title="Retroceder 5 segundos" type="button">«</button>
+            <button id="playPauseBtn" class="btn btn-icon btn-play" title="Reproducir / Pausar [Espacio]" type="button">
+              <svg id="iconPlay" viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M8 5v14l11-7z"/></svg>
+              <svg id="iconPause" viewBox="0 0 24 24" fill="currentColor" width="16" height="16" class="hidden"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+            </button>
+            <button id="seekFwdBtn" class="btn btn-icon" title="Avanzar 5 segundos" type="button">»</button>
+            <div class="time-display"><span id="currentTimeDisplay" class="time-current">0:00.00</span><span class="time-sep"> / </span><span id="durationDisplay" class="time-total">0:00.00</span></div>
+            <input type="range" id="volumeSlider" class="vol-slider" min="0" max="1" step="0.01" value="1" title="Volumen">
+          </div>
+          <div class="zoom-ctrl">
+            <button id="zoomOutBtn" class="btn btn-icon btn-xs-icon" type="button">−</button>
+            <input type="range" id="zoomSlider" class="zoom-slider" min="15" max="600" step="5" value="80">
+            <button id="zoomInBtn" class="btn btn-icon btn-xs-icon" type="button">+</button>
+            <span id="zoomLabel" class="zoom-label">100%</span>
+          </div>
+          <div class="tl-actions">
+            <button id="undoBtn" class="btn btn-icon btn-xs-icon" title="Deshacer [Ctrl+Z]" disabled type="button">↶</button>
+            <button id="redoBtn" class="btn btn-icon btn-xs-icon" title="Rehacer [Ctrl+Y]" disabled type="button">↷</button>
+            <button id="newSongBtn" class="btn btn-ghost btn-sm" type="button">Nueva canción</button>
+            <button id="tapSyncEditorBtn" class="btn btn-ghost btn-sm" type="button">Tap Sync</button>
+            <button id="addSegmentBtn" class="btn btn-secondary btn-sm" type="button">+ Línea</button>
+            <button id="sortBtn" class="btn btn-ghost btn-sm" type="button">Ordenar</button>
+            <button id="retranscribeBtn" class="btn btn-ghost btn-sm" type="button">Reintentar Whisper</button>
+          </div>
+        </div>
+        <div class="tl-viewport">
+          <div class="tl-labels-col">
+            <div class="tl-label-cell lrc-ruler-label"></div>
+            <div class="tl-label-cell lrc-wave-label">
+              <span class="track-name">FORMA DE ONDA</span>
+              <button id="waveVocalsBtn" class="btn-wave-vocals hidden" title="Alternar forma de onda vocal" type="button">VOC</button>
+            </div>
+            <div class="tl-label-cell lrc-lines-label"><span class="track-name">LETRA</span><span class="track-sub">Arrastra para ajustar</span></div>
+          </div>
+          <div class="tl-scroll-area" id="tlScrollArea">
+            <div class="tl-inner" id="tlInner">
+              <canvas id="rulerCanvas" class="tl-ruler-canvas" height="28"></canvas>
+              <div class="tl-row-wave" id="tlWaveRow">
+                <canvas id="waveCanvasBg" height="90"></canvas>
+                <canvas id="waveCanvasFg" height="90" class="wave-fg"></canvas>
+              </div>
+              <div class="tl-row-track" id="tlSegTrack"><div class="tl-track-lane"></div></div>
+              <div id="tlPlayhead" class="tl-playhead"><div class="tl-playhead-head"></div></div>
+            </div>
+          </div>
+        </div>
+        <div class="tl-hint-bar"><kbd>Espacio</kbd> Reproducir/Pausar · <kbd>Enter</kbd> Añadir línea · Arrastrar bloques para mover o recortar · Doble clic para editar texto</div>
+      </div>
+
+      <div class="lrc-editor-bottom">
+        <div class="panel seg-list-panel">
+          <div class="panel-header"><span class="panel-title">Letra y marcas de tiempo</span></div>
+          <div class="seg-list-header"><span>Tiempo</span><span>Texto</span><span></span></div>
+          <div id="segmentsList" class="segments-list"></div>
+        </div>
+        <div class="panel export-panel">
+          <div class="panel-header"><span class="panel-title">Exportar LRC</span></div>
+          <div class="export-meta">
+            <div class="input-group"><label class="label" for="titleInput">Título</label><input type="text" id="titleInput" class="input" placeholder="Título de la canción"></div>
+            <div class="input-group"><label class="label" for="artistInput">Artista</label><input type="text" id="artistInput" class="input" placeholder="Artista"></div>
+          </div>
+          <div class="export-actions">
+            <button id="exportBtn" class="btn btn-primary btn-sm" type="button">Descargar .lrc</button>
+            <button id="copyLrcBtn" class="btn btn-secondary btn-sm" type="button">Copiar</button>
+            <button id="previewToggleBtn" class="btn btn-ghost btn-sm" type="button">Vista previa</button>
+          </div>
+          <pre id="lrcPreview" class="lrc-preview hidden"></pre>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<div id="tapSyncOverlay" class="tap-overlay hidden" tabindex="-1">
+  <div class="tap-header">
+    <div class="tap-meta"><span class="en-phase-label">Sincronización manual por línea</span><span id="tapCountDisplay" class="tap-count">0 / 0</span></div>
+    <div class="tap-instr"><kbd>Espacio</kbd> Marcar · <kbd>Retroceso</kbd> Deshacer · <kbd>Esc</kbd> Cancelar</div>
+    <div class="tap-header-right"><span id="tapTimeDisplay" class="tap-time">0:00.00</span><button id="tapVocalsBtn" class="btn btn-ghost btn-sm" type="button">Voz</button><button id="tapCancelBtn" class="btn btn-ghost btn-sm" type="button">✕</button></div>
+  </div>
+  <div class="tap-wave-wrap"><canvas id="tapWaveCanvas" class="tap-wave-canvas"></canvas></div>
+  <div id="tapIsolatingScreen" class="tap-isolating-screen hidden">
+    <div class="tap-isolating-inner"><div class="spinner-ring tap-isolating-spinner"></div><p id="tapIsolatingStatus" class="tap-isolating-status">Preparando aislamiento vocal…</p><div class="tap-isolating-bar-wrap"><div id="tapIsolatingBar" class="tap-isolating-bar"></div></div><p id="tapIsolatingPct" class="tap-isolating-pct">0%</p><button id="tapIsolatingSkip" class="btn btn-ghost btn-sm" type="button">Omitir y continuar con el audio original</button></div>
+  </div>
+  <div class="tap-stage"><div id="tapLinesList" class="tap-lines-list"></div></div>
+  <div class="tap-footer"><div class="tap-footer-bar"><div id="tapAudioProgress" class="tap-audio-progress"></div></div><p id="tapHint" class="tap-hint-text"><span class="tap-space-hint">ESPACIO</span> inicia la reproducción y marca el comienzo de cada línea</p><button id="tapFinishBtn" class="btn btn-primary btn-sm" disabled type="button">Terminar sincronización</button></div>
+</div>
+<div id="toast" class="toast hidden"></div>
+
+<script src="https://unpkg.com/wavesurfer.js@7/dist/wavesurfer.min.js"></script>
+<script src="/static/shared.js"></script>
+<script src="/static/app-state.js"></script>
+<script src="/static/app-upload.js"></script>
+<script src="/static/app-tap.js"></script>
+<script src="/static/app-editor.js"></script>
+<script src="/static/lrc-ui.js"></script>
+</body>
+</html>

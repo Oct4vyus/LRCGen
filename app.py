@@ -104,6 +104,11 @@ async def root():
     return FileResponse("static/index.html")
 
 
+@app.get("/lrc")
+async def lrc_studio():
+    return FileResponse("static/lrc.html")
+
+
 @app.get("/api/uvr_available")
 async def uvr_available():
     """Check whether audio-separator is importable."""
