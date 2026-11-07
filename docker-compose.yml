@@ -6,7 +6,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: lrcgen:latest
+    image: lrcgen:local
     restart: unless-stopped
     networks:
       - lrc_network
